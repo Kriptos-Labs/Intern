@@ -1,67 +1,69 @@
 # import libraries
-from flask import Flask, render_template
+from flask import Flask, render_template, request
 import urllib.request, json
 import requests
+from const import url_list, api_key, sesion_id, url_create_list, url_mp, url_gmid
 
 app = Flask(__name__)
+
+#Create an enviroment in this proyect
+#Activate the enviroment env\Scripts\activate
+#Excecute the command set FLASK_APP=app
+#Excecute the command flask run
+#Running on http://127.0.0.1:5000/
+
+#Welcome
+@app.route("/")
+def welcome():
+    return render_template('index.html')
 
 #Sending a request to the https://www.themoviedb.org/ API. 
 #Create a URL using the TMDB API key. 
 #Return data to the template movie.html
-@app.route("/")
+@app.route("/popular")
 def get_movies():
-    url= "https://api.themoviedb.org/3/movie/popular?api_key=4e83fa69feb76abc963a019c8fec4375"
-
+    url=url_mp+api_key
     response = urllib.request.urlopen(url)
     data = response.read()
     jsondata = json.loads(data)
 
     return render_template ('movie.html', movies=jsondata["results"])
 
-#Sending a request to the TMDB API. 
-#Create a URL using the TMDB API key. 
-@app.route("/movies")
-def get_movies_description():
-    url = "https://api.themoviedb.org/3/movie/popular?api_key=4e83fa69feb76abc963a019c8fec4375"
 
-    response = urllib.request.urlopen(url)
-    data = response.read()
-    jsondata = json.loads(data)
-    print(jsondata)
-    movie_json = []
-    
-    for movie in jsondata["results"]:
-        movie = {
-            "title": movie["title"],
-            "overview": movie["overview"],
-            "original_language": movie["original_language"]
-        }
-        movie_json.append(movie)
-    #print(movie_json)
-    return {"movie title": movie_json}
-
-#Send a request to the API with search parameters by id 
-@app.route("/search_by_id/<string:movie_id>")
+#Send a request to the API with search parameters by id_movie
+@app.route("/search_by_id/<int:movie_id>")
 def get_only_movie(movie_id):
-    url= "https://api.themoviedb.org/3/movie/"
-    params = {"api_key":"4e83fa69feb76abc963a019c8fec4375"}
-    
-    response = requests.get(url=url+movie_id,params=params)
+    response = requests.get(url=url_gmid+str(movie_id),params = {"api_key":api_key})
     data=response.json()
     return {"movie information": data}
 
-#Send a request to the API Spotify with parameter of authorization 
-#Generete new token for search  
-@app.route("/spotify")
-def get_search():
-    response = requests.get('https://api.spotify.com/v1/browse/categories',
-        headers={'Accept': 'application/json','Authorization':'Bearer BQAIhqR82pLD2PflzkJWRrKy3oWj02-vDOa5XBnMrMrMOaryZxObQDIf5G_1D-tHQ2DR3xeXq9j0bUgzVi7CCnlUout3ExZJ71BSogDuByXzcoxLHY90UkK5gPCg3E42qoxExEiaVhRnRK_SFkpQ1GiY-J7fa5THlqZQTJmVmzyv'}
-    )
+#Post peticion to create a list in TMDB API
+#Data to create list in sending by ULR
+@app.route("/create/<string:name_list>/<string:desc>/<string:lang>", methods=['POST'])
+def create_list(name_list,desc,lang):
+    url=url_create_list+'?api_key='+api_key+'&session_id='+sesion_id
+    data={'name':name_list, 'description':desc,'language':lang}
+    response = requests.post(url,data)
     json_response= response.json()
     return json_response
 
+#Send a request to the API with search parameters by id_list
+@app.route("/view/<int:id>")
+def view_list(id):
+    response = requests.get(url=url_list+str(id),params={'api_key':api_key})
+    json_response= response.json()
+    
+    return json_response
+
+#Delete peticion to the TMDB API to delete a list
+@app.route('/delete/<int:id>', methods=['DELETE'])
+def delete(id):
+    response=requests.delete(url=url_list+str(id), params={'api_key':api_key,'session_id':sesion_id})
+    
+    return 'Lista eliminada'
+   
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(debug=True, port=5000)
     
-#Running on http://127.0.0.1:5000/
+
